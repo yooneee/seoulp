@@ -1,1 +1,1 @@
-web: gunicorn seoulp:app
+web: python seoulp:app

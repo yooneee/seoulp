@@ -1,22 +1,21 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
-import requests
-import os
+import aiohttp
+import asyncio
+from aiohttp import web
+import os  # os 모듈 추가
 
-app = Flask(__name__)
-CORS(app)
+async def fetch_area_data(session, url):
+    async with session.get(url) as response:
+        if response.status == 200:
+            return await response.json()
+        else:
+            return {"error": "Data fetching failed"}
 
-
-@app.route('/population', methods=['GET'])
-def get_population():
-    service_key = os.getenv('SERVICE_KEY')
+async def get_population(request):
+    service_key = os.getenv('SERVICE_KEY')  # 환경 변수에서 서비스 키 가져오기
     base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
-
-    # 모든 지역명 리스트에 포함
-    area_nms = [
-        '강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
+    area_nms = ['강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
         '종로·청계 관광특구', '홍대 관광특구', '경복궁', '광화문·덕수궁', '보신각', '서울 암사동 유적',
         '창덕궁·종묘', '가산디지털단지역', '강남역', '건대입구역', '고덕역', '고속터미널역', '교대역',
         '구로디지털단지역', '구로역', '군자역', '남구로역', '대림역', '동대문역', '뚝섬역', '미아사거리역',
@@ -33,26 +32,19 @@ def get_population():
         '뚝섬한강공원', '망원한강공원', '반포한강공원', '북서울꿈의숲', '불광천', '서리풀공원·몽마르뜨공원',
         '서울광장', '서울대공원', '서울숲공원', '아차산', '양화한강공원', '어린이대공원', '여의도한강공원',
         '월드컵공원', '응봉산', '이촌한강공원', '잠실종합운동장', '잠실한강공원', '잠원한강공원', '청계산',
-        '청와대', '북창동 먹자골목', '남대문시장'
-    ]
-    all_data = []
+        '청와대', '북창동 먹자골목', '남대문시장']  # 예시로 몇 개만 지정
 
-    for area_nm in area_nms:
-        final_url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
-        response = requests.get(final_url)
-         # 상태 코드와 응답 내용을 검증
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                all_data.append(data)
-            except ValueError:  # JSON 디코딩 실패
-                return jsonify({"error": f"Invalid JSON response for AREA_NM: {area_nm}"}), 500
-        else:
-            # API 호출 실패 (비정상 상태 코드)
-            return jsonify({"error": f"Data fetching failed for AREA_NM: {area_nm} with status code {response.status_code}"}), 500
-    # 모든 지역 데이터를 JSON 형태로 변환하여 반환
-    return jsonify(all_data)
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for area_nm in area_nms:
+            url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
+            tasks.append(fetch_area_data(session, url))
+        
+        results = await asyncio.gather(*tasks)
+        return web.json_response(results)
 
+app = web.Application()
+app.router.add_get('/population', get_population)
 
 if __name__ == '__main__':
-    app.run()
+    web.run_app(app, port=8000)
