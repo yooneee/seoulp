@@ -8,7 +8,7 @@ CORS(app)
 
 @app.route('/population', methods=['GET'])
 def get_population():
-    service_key = "YOUR_SERVICE_KEY_HERE"
+    service_key = "SERVICE_KEY"
     base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
