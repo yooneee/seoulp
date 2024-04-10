@@ -47,4 +47,4 @@ app = web.Application()
 app.router.add_get('/population', get_population)
 
 if __name__ == '__main__':
-    web.run_app(app, port=8000)
+    web.run_app(app, port=int(os.getenv('PORT', 8000)))

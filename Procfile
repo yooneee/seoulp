@@ -1,1 +1,1 @@
-web: python seoulp:app
+web: python seoulp.py
