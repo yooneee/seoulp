@@ -1,27 +1,21 @@
-
-import asyncio
-import aiohttp
-from flask_cors import CORS
 from flask import Flask, jsonify
+from flask_cors import CORS
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
-async def fetch_area_data(session, url):
-    async with session.get(url) as response:
-        if response.status:
-            return await response.json()
-        else:
-            return {"error": "Data fetching failed"}
-
 
 @app.route('/population', methods=['GET'])
-async def get_population():
-    service_key = "507173786268756c353574497a4961"
+def get_population():
+    service_key = "YOUR_SERVICE_KEY_HERE"
     base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
-    area_nms = ['강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
+
+    # 모든 지역명 리스트에 포함
+    area_nms = [
+        '강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
         '종로·청계 관광특구', '홍대 관광특구', '경복궁', '광화문·덕수궁', '보신각', '서울 암사동 유적',
         '창덕궁·종묘', '가산디지털단지역', '강남역', '건대입구역', '고덕역', '고속터미널역', '교대역',
         '구로디지털단지역', '구로역', '군자역', '남구로역', '대림역', '동대문역', '뚝섬역', '미아사거리역',
@@ -38,17 +32,24 @@ async def get_population():
         '뚝섬한강공원', '망원한강공원', '반포한강공원', '북서울꿈의숲', '불광천', '서리풀공원·몽마르뜨공원',
         '서울광장', '서울대공원', '서울숲공원', '아차산', '양화한강공원', '어린이대공원', '여의도한강공원',
         '월드컵공원', '응봉산', '이촌한강공원', '잠실종합운동장', '잠실한강공원', '잠원한강공원', '청계산',
-        '청와대', '북창동 먹자골목', '남대문시장']  # and so on...
+        '청와대', '북창동 먹자골목', '남대문시장'
+    ]
+    all_data = []
 
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for area_nm in area_nms:
-            url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
-            tasks.append(fetch_area_data(session, url))
-        results = await asyncio.gather(*tasks)
-        return jsonify(results)
+    for area_nm in area_nms:
+        final_url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
+        response = requests.get(final_url)
+        if response.status_code == 200:
+            data = response.json()
+            # 여기서 data 변수는 지역명에 대한 응답 데이터를 포함하는 JSON 객체입니다.
+            # 응답 구조에 따라 필요한 정보를 추출하고 저장할 수 있습니다.
+            all_data.append(data)
+        else:
+            return jsonify({"error": "Data fetching failed for AREA_NM: " + area_nm}), 500
+
+    # 모든 지역 데이터를 JSON 형태로 변환하여 반환
+    return jsonify(all_data)
 
 
 if __name__ == '__main__':
-    #app.run(debug=True)
     app.run()
