@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import requests
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -8,7 +9,7 @@ CORS(app)
 
 @app.route('/population', methods=['GET'])
 def get_population():
-    service_key = "SERVICE_KEY"
+    service_key = os.getenv('SERVICE_KEY')
     base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
@@ -39,14 +40,16 @@ def get_population():
     for area_nm in area_nms:
         final_url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
         response = requests.get(final_url)
+         # 상태 코드와 응답 내용을 검증
         if response.status_code == 200:
-            data = response.json()
-            # 여기서 data 변수는 지역명에 대한 응답 데이터를 포함하는 JSON 객체입니다.
-            # 응답 구조에 따라 필요한 정보를 추출하고 저장할 수 있습니다.
-            all_data.append(data)
+            try:
+                data = response.json()
+                all_data.append(data)
+            except ValueError:  # JSON 디코딩 실패
+                return jsonify({"error": f"Invalid JSON response for AREA_NM: {area_nm}"}), 500
         else:
-            return jsonify({"error": "Data fetching failed for AREA_NM: " + area_nm}), 500
-
+            # API 호출 실패 (비정상 상태 코드)
+            return jsonify({"error": f"Data fetching failed for AREA_NM: {area_nm} with status code {response.status_code}"}), 500
     # 모든 지역 데이터를 JSON 형태로 변환하여 반환
     return jsonify(all_data)
 
