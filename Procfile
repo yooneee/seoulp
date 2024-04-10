@@ -1,1 +1,1 @@
-web: gunicorn seoulp:app -w 4
+web: uvicorn myapp:app --worker-class=uvicorn.workers.UvicornWorker
