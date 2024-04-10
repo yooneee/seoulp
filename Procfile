@@ -1,0 +1,1 @@
+web: gunicorn -k aiohttp.GunicornWebWorker -w 4 seoulp:app
