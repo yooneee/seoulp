@@ -45,19 +45,19 @@ async def get_population(request):
         return web.json_response(results)
 
 app = web.Application()
-cors = aiohttp_cors.setup(app)
-resource = app.router.add_resource("/population")
-route = resource.add_route("GET", get_population)
 
-
-cors.add(route, {
-    "https://dalyoon.com/": aiohttp_cors.ResourceOptions(
-        allow_credentials=True,
-        expose_headers="*",
-        allow_headers="*",
-        allow_methods="*"
-    )
+# CORS 설정 추가
+cors = aiohttp_cors.setup(app, defaults={
+    "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
 })
+
+# 라우트 설정 후 CORS 설정 적용
+resource = cors.add(app.router.add_resource("/population"))
+cors.add(resource.add_route("GET", get_population))
 
 if __name__ == '__main__':
     web.run_app(app, port=int(os.getenv('PORT', 8000)))
