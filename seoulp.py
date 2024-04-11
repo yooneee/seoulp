@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 from aiohttp import web
+import aiohttp_cors  # aiohttp_cors 추가
 import os  # os 모듈 추가
 
 async def fetch_area_data(session, url):
@@ -44,7 +45,19 @@ async def get_population(request):
         return web.json_response(results)
 
 app = web.Application()
-app.router.add_get('/population', get_population)
+cors = aiohttp_cors.setup(app)
+resource = app.router.add_resource("/population")
+route = resource.add_route("GET", get_population)
+
+
+cors.add(route, {
+    "https://dalyoon.com/": aiohttp_cors.ResourceOptions(
+        allow_credentials=True,
+        expose_headers="*",
+        allow_headers="*",
+        allow_methods="*"
+    )
+})
 
 if __name__ == '__main__':
     web.run_app(app, port=int(os.getenv('PORT', 8000)))
