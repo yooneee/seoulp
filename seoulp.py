@@ -42,7 +42,7 @@ async def get_population(request):
 
 async def get_parking_status(request):
     service_key = os.getenv('SERVICE_KEY_INCHEON')  # 인천 서비스 키
-    base_url = "https://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
+    base_url = "http://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
     params = {'serviceKey': service_key, 'numOfRows': '50', 'pageNo': '1', 'type': 'json'}
 
     async with aiohttp.ClientSession() as session:
