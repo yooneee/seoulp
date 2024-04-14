@@ -13,7 +13,7 @@ async def fetch_data(session, url, params=None):
 
 async def get_population(request):
     service_key = os.getenv('SERVICE_KEY')  # 환경 변수에서 서비스 키 가져오기
-    base_url = "https://openapi.seoul.go.kr:8088/"
+    base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
     area_nms = ['강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
