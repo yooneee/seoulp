@@ -48,7 +48,7 @@ app = web.Application()
 
 # CORS 설정 추가
 cors = aiohttp_cors.setup(app, defaults={
-    "https://dalyoon.com": aiohttp_cors.ResourceOptions(
+    "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
             expose_headers="*",
             allow_headers="*",
