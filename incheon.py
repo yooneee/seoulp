@@ -13,7 +13,7 @@ async def fetch_parking_data(session, url, params):
 
 async def get_parking_status(request):
     service_key = os.getenv('SERVICE_KEY_INCHEON')  # 환경 변수에서 서비스 키 가져오기
-    base_url = "http://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
+    base_url = "https://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
     params = {
         'serviceKey': service_key,
         'numOfRows': '50',
