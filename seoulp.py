@@ -1,19 +1,19 @@
 import aiohttp
 import asyncio
 from aiohttp import web
-import aiohttp_cors  # aiohttp_cors 추가
-import os  # os 모듈 추가
+import aiohttp_cors  # CORS 지원을 위한 라이브러리 추가
+import os
 
-async def fetch_area_data(session, url):
-    async with session.get(url) as response:
+async def fetch_data(session, url, params=None):
+    async with session.get(url, params=params) as response:
         if response.status == 200:
             return await response.json()
         else:
-            return {"error": "Data fetching failed"}
+            return {"error": "Data fetching failed", "status": response.status}
 
 async def get_population(request):
     service_key = os.getenv('SERVICE_KEY')  # 환경 변수에서 서비스 키 가져오기
-    base_url = "http://openapi.seoul.go.kr:8088/"
+    base_url = "https://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
     area_nms = ['강남 MICE 관광특구', '동대문 관광특구', '명동 관광특구', '이태원 관광특구', '잠실 관광특구',
@@ -33,31 +33,30 @@ async def get_population(request):
         '뚝섬한강공원', '망원한강공원', '반포한강공원', '북서울꿈의숲', '불광천', '서리풀공원·몽마르뜨공원',
         '서울광장', '서울대공원', '서울숲공원', '아차산', '양화한강공원', '어린이대공원', '여의도한강공원',
         '월드컵공원', '응봉산', '이촌한강공원', '잠실종합운동장', '잠실한강공원', '잠원한강공원', '청계산',
-        '청와대', '북창동 먹자골목', '남대문시장']  # 예시로 몇 개만 지정
+        '청와대', '북창동 먹자골목', '남대문시장']
 
     async with aiohttp.ClientSession() as session:
-        tasks = []
-        for area_nm in area_nms:
-            url = f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}"
-            tasks.append(fetch_area_data(session, url))
-        
+        tasks = [fetch_data(session, f"{base_url}{service_key}/{response_format}/{service_name}/1/5/{area_nm}") for area_nm in area_nms]
         results = await asyncio.gather(*tasks)
         return web.json_response(results)
 
-app = web.Application()
+async def get_parking_status(request):
+    service_key = os.getenv('SERVICE_KEY_INCHEON')  # 인천 서비스 키
+    base_url = "https://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
+    params = {'serviceKey': service_key, 'numOfRows': '50', 'pageNo': '1', 'type': 'json'}
 
-# CORS 설정 추가
+    async with aiohttp.ClientSession() as session:
+        result = await fetch_data(session, base_url, params)
+        return web.json_response(result)
+
+app = web.Application()
 cors = aiohttp_cors.setup(app, defaults={
-    "*": aiohttp_cors.ResourceOptions(
-            allow_credentials=True,
-            expose_headers="*",
-            allow_headers="*",
-        )
+    "*": aiohttp_cors.ResourceOptions(allow_credentials=True, expose_headers="*", allow_headers="*")
 })
 
-# 라우트 설정 후 CORS 설정 적용
-resource = cors.add(app.router.add_resource("/population"))
-cors.add(resource.add_route("GET", get_population))
+# 라우트 설정
+cors.add(app.router.add_route("GET", "/population", get_population))
+cors.add(app.router.add_route("GET", "/get-parking-status", get_parking_status))
 
 if __name__ == '__main__':
     web.run_app(app, port=int(os.getenv('PORT', 8000)))
