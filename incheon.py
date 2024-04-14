@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 from aiohttp import web
+import aiohttp_cors  # CORS 지원을 위한 라이브러리 추가
 import os
 
 async def fetch_parking_data(session, url, params):
@@ -25,7 +26,17 @@ async def get_parking_status(request):
         return web.json_response(result)
 
 app = web.Application()
-app.router.add_get('/get-parking-status', get_parking_status)
+cors = aiohttp_cors.setup(app, defaults={
+    "*": aiohttp_cors.ResourceOptions(
+        allow_credentials=True,
+        expose_headers="*",
+        allow_headers="*",
+    )
+})
+
+# CORS 설정 적용한 라우트 설정
+resource = cors.add(app.router.add_resource("/get-parking-status"))
+cors.add(resource.add_route("GET", get_parking_status))
 
 if __name__ == '__main__':
-    web.run_app(app, host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
+    web.run_app(app, port=int(os.getenv('PORT', 8080)))
