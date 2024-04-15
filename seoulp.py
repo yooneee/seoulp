@@ -1,8 +1,45 @@
 import aiohttp
 import asyncio
 from aiohttp import web
-import aiohttp_cors  # CORS 지원을 위한 라이브러리 추가
+import aiohttp_cors
 import os
+import xmltodict
+
+# 공항 코드 리스트
+AIRPORT_CODES = [
+    'GMP', 'PUS', 'CJU', 'TAE', 'KWJ',
+    'RSU', 'USN', 'KUV', 'WJU', 'CJJ'
+]
+
+async def fetch_parking_data(session, url, params):
+    async with session.get(url, params=params) as response:
+        if response.status == 200:
+            text = await response.text()
+            return xmltodict.parse(text)
+        else:
+            return {"error": "Data fetching failed", "status": response.status}
+
+async def get_all_airport_parking(request):
+    service_key = os.getenv('SERVICE_KEY_GIMPOPARK')
+    base_url = "http://openapi.airport.co.kr/service/rest/AirportParkingCongestion/airportParkingCongestionRT"
+    num_of_rows = request.query.get('numOfRows', '10')
+    page_no = request.query.get('pageNo', '1')
+
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for airport_code in AIRPORT_CODES:
+            params = {
+                'serviceKey': service_key,
+                'schAirportCode': airport_code,
+                'numOfRows': num_of_rows,
+                'pageNo': page_no,
+                '_type': 'xml'
+            }
+            task = fetch_parking_data(session, base_url, params)
+            tasks.append(task)
+        
+        results = await asyncio.gather(*tasks)
+        return web.json_response(results)
 
 async def fetch_data(session, url, params=None):
     async with session.get(url, params=params) as response:
@@ -12,7 +49,7 @@ async def fetch_data(session, url, params=None):
             return {"error": "Data fetching failed", "status": response.status}
 
 async def get_population(request):
-    service_key = os.getenv('SERVICE_KEY')  # 환경 변수에서 서비스 키 가져오기
+    service_key = os.getenv('SERVICE_KEY')
     base_url = "http://openapi.seoul.go.kr:8088/"
     response_format = "json"
     service_name = "citydata_ppltn"
@@ -41,8 +78,8 @@ async def get_population(request):
         return web.json_response(results)
 
 async def get_parking_status(request):
-    service_key = os.getenv('SERVICE_KEY_INCHEON')  # 인천 서비스 키
-    base_url = "http://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
+    service_key = os.getenv('SERVICE_KEY_INCHEON')
+    base_url = "https://apis.data.go.kr/B551177/StatusOfParking/getTrackingParking"
     params = {'serviceKey': service_key, 'numOfRows': '50', 'pageNo': '1', 'type': 'json'}
 
     async with aiohttp.ClientSession() as session:
@@ -51,12 +88,22 @@ async def get_parking_status(request):
 
 app = web.Application()
 cors = aiohttp_cors.setup(app, defaults={
-    "*": aiohttp_cors.ResourceOptions(allow_credentials=True, expose_headers="*", allow_headers="*")
+    "*": aiohttp_cors.ResourceOptions(
+        allow_credentials=True,
+        expose_headers="*",
+        allow_headers="*"
+    )
 })
 
 # 라우트 설정
-cors.add(app.router.add_route("GET", "/population", get_population))
-cors.add(app.router.add_route("GET", "/get-parking-status", get_parking_status))
+population_route = cors.add(app.router.add_resource("/population"))
+cors.add(population_route.add_route("GET", get_population))
+
+parking_status_route = cors.add(app.router.add_resource("/get-parking-status"))
+cors.add(parking_status_route.add_route("GET", get_parking_status))
+
+all_airports_parking_route = cors.add(app.router.add_resource("/all-airport-parking"))
+cors.add(all_airports_parking_route.add_route("GET", get_all_airport_parking))
 
 if __name__ == '__main__':
     web.run_app(app, port=int(os.getenv('PORT', 8000)))
