@@ -86,6 +86,18 @@ async def get_parking_status(request):
         result = await fetch_data(session, base_url, params)
         return web.json_response(result)
 
+async def get_seoul_parking_data(request):
+    api_key = os.getenv('SERVICE_KEY')
+    url = f'http://openapi.seoul.go.kr:8088/{api_key}/json/GetParkingInfo/1/1000/'
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(url)
+        if response.status == 200:
+            data = await response.json()
+            filtered_data = [item for item in data['GetParkingInfo']['row'] if item['QUE_STATUS'] == '1']
+            return web.json_response(filtered_data)
+        else:
+            return web.json_response({'error': 'Failed to fetch data', 'status': response.status}, status=500)
+        
 app = web.Application()
 cors = aiohttp_cors.setup(app, defaults={
     "*": aiohttp_cors.ResourceOptions(
@@ -104,6 +116,9 @@ cors.add(parking_status_route.add_route("GET", get_parking_status))
 
 all_airports_parking_route = cors.add(app.router.add_resource("/all-airport-parking"))
 cors.add(all_airports_parking_route.add_route("GET", get_all_airport_parking))
+
+seoul_parking_route = cors.add(app.router.add_resource("/seoul-parking"))
+cors.add(seoul_parking_route.add_route("GET", get_seoul_parking_data))
 
 if __name__ == '__main__':
     web.run_app(app, port=int(os.getenv('PORT', 8000)))
